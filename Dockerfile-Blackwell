@@ -1,0 +1,37 @@
+# Build cmd: docker build . -t gr00t:test -f Dockerfile-Blackwell
+
+FROM nvcr.io/nvidia/pytorch:25.06-py3
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONPATH=/workspace:${PYTHONPATH}
+
+# System dependencies
+RUN apt update && \
+    apt install -y tzdata && \
+    apt install -y netcat dnsutils && \
+    apt-get update && \
+    apt-get install -y libgl1-mesa-glx git libvulkan-dev \
+    zip unzip wget curl git git-lfs build-essential cmake \
+    vim less sudo htop ca-certificates man tmux ffmpeg tensorrt \
+    # Add OpenCV system dependencies
+    libglib2.0-0 libsm6 libxext6 libxrender-dev
+
+RUN pip install --upgrade pip setuptools
+RUN pip install gpustat wandb==0.19.0
+# Create and set working directory
+WORKDIR /workspace
+# Installing pytorch3d from source by pip git
+RUN FORCE_CUDA=1 pip install "git+https://github.com/facebookresearch/pytorch3d.git"
+# Copy pyproject.toml for dependencies
+COPY pyproject-Blackwell.toml ./pyproject.toml
+# Install dependencies from pyproject.toml
+RUN pip install -e .[base]
+# Clean any existing OpenCV installations
+RUN pip uninstall -y opencv-python opencv-python-headless || true
+RUN rm -rf /usr/local/lib/python3.10/dist-packages/cv2 || true
+RUN pip install opencv-python==4.8.0.74 opencv-python-headless || true
+RUN pip install opencv_python_headless==4.11.0.86 numpy==1.26.4 tf-keras || true
+
+COPY getting_started /workspace/getting_started
+COPY scripts /workspace/scripts
+COPY demo_data /workspace/demo_data
+RUN pip install -e . --no-deps
