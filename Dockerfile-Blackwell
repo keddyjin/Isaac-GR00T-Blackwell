@@ -1,8 +1,29 @@
-# Build cmd: docker build . -t gr00t:test -f Dockerfile-Blackwell
+# Build cmd for x86_64: docker build . -t gr00t:test -f Dockerfile-Blackwell --platform linux/amd64
+#           for arm64: docker build . -t gr00t:test -f Dockerfile-Blackwell --platform linux/arm64  
 
-FROM nvcr.io/nvidia/pytorch:25.06-py3
+ARG TARGETPLATFORM
+FROM --platform=$TARGETPLATFORM nvcr.io/nvidia/pytorch:25.06-py3
+
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONPATH=/workspace:${PYTHONPATH}
+
+ARG BUILDPLATFORM TARGETOS TARGETARCH TARGETPLATFORM
+# RUN echo $BUILDPLATFORM $TARGETPLATFORM $TARGETOS $TARGETARCH
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+      echo "For arm64, need to source build and install decord" && \
+      apt update && apt install -y ffmpeg libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev && \
+      # Create a dummy libnvcuvid.so to solve the issue related to libnvcuvid.so
+      touch /usr/local/cuda/lib64/libnvcuvid.so && \
+      git clone --recursive https://github.com/milahu/decord.git && \
+      cd decord && git checkout fix-build-ffmpeg6 && \
+      mkdir build && cd build && \
+      cmake .. -DUSE_CUDA=ON -DCMAKE_BUILD_TYPE=Release && \
+      make -j8 && \
+      cd ../python && python3 setup.py install && \
+      cd .. && rm -rf decord; \
+    else \
+      echo "For x86_64, using pip to install decord"; \
+    fi
 
 # System dependencies
 RUN apt update && \
