@@ -12,7 +12,7 @@ ARG BUILDPLATFORM TARGETOS TARGETARCH TARGETPLATFORM
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
       echo "For arm64, need to source build and install decord" && \
       apt update && apt install -y ffmpeg libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev && \
-      # Create a dummy libnvcuvid.so to solve the issue related to libnvcuvid.so
+      # Create a dummy libnvcuvid.so to solve the issue related to libnvcuvid.so, refer to https://github.com/dmlc/decord/issues/276
       touch /usr/local/cuda/lib64/libnvcuvid.so && \
       git clone --recursive https://github.com/milahu/decord.git && \
       cd decord && git checkout fix-build-ffmpeg6 && \
